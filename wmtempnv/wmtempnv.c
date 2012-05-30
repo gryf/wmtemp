@@ -1,5 +1,5 @@
 /*
- * wmtempmon: a sensor monitor for WindowMaker. this little app is mainly based
+ * wmtempnv: a sensor monitor for WindowMaker. this little app is mainly based
  * on wmsensormon and other simple dockapps.
  *
  * version = 0.1
@@ -19,8 +19,8 @@
 #include <string.h>
 #include "../wmgeneral/wmgeneral.h"
 #include "../wmgeneral/misc.h"
-#include "wmtempmon_master2.xpm"
-#include "wmtempmon_mask.xbm"
+#include "wmtempnv_master2.xpm"
+#include "wmtempnv_mask.xbm"
          
 #define MAXSTRLEN 8
 #define TEMP 40
@@ -38,7 +38,7 @@ int main(int argc, char **argv){
     int offset1=0, offset2=0, offset3=0;
 	int counter = 0;
 
-    openXwindow(argc, argv, wmtempmon_master2_xpm, wmtempmon_mask_bits, wmtempmon_mask_width, wmtempmon_mask_height);
+    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits, wmtempnv_mask_width, wmtempnv_mask_height);
 
 	while(TRUE){
 		if(counter==0){

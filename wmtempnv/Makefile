@@ -1,9 +1,9 @@
 # By RedSeb 1999, Liverbugg 2002
 
 
-SRC = wmtempmon.c ../wmgeneral/wmgeneral.c ../wmgeneral/misc.c ../wmgeneral/list.c
+SRC = wmtempnv.c ../wmgeneral/wmgeneral.c ../wmgeneral/misc.c ../wmgeneral/list.c
 
-EXE = wmtempmon
+EXE = wmtempnv
 
 OBJ = $(SRC:.c=.o)
 
