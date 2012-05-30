@@ -1,5 +1,4 @@
-# By RedSeb 1999, Liverbugg 2002
-
+system=Linux
 
 SRC = wmtempnv.c ../wmgeneral/wmgeneral.c ../wmgeneral/misc.c ../wmgeneral/list.c
 
@@ -9,7 +8,7 @@ OBJ = $(SRC:.c=.o)
 
 CFLAGS = -Wall -O3
 
-LIB = -L/usr/X11R6/lib -lXpm -lXext -lX11 -lsensors
+LIB = -L/usr/X11R6/lib -lXpm -lXext -lX11 -lsensors -lbackend -L../nvclock
 
 INSTALL = /usr/bin/install
 
@@ -17,7 +16,7 @@ CC = gcc
 
 all: $(OBJ)
 	$(CC) -o $(EXE) $(OBJ) $(LIB)
-	strip $(EXE)
+	#strip $(EXE)
 
 $(OBJ): %.o : %.c 
 	$(CC) $(CFLAGS) -c -o $@ $<
