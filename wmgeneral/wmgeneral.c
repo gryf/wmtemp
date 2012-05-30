@@ -366,7 +366,7 @@ void setMaskXY(int x, int y) {
 /*******************************************************************************\
 |* openXwindow																   *|
 \*******************************************************************************/
-void openXwindow(int argc, char *argv[], char *pixmap_bytes[], char *pixmask_bits, int pixmask_width, int pixmask_height) {
+void openXwindow(int argc, char *argv[], char *pixmap_bytes[], const char *pixmask_bits, int pixmask_width, int pixmask_height) {
 
 	unsigned int	borderwidth = 1;
 	XClassHint		classHint;

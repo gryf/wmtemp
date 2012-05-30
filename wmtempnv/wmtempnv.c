@@ -2,11 +2,10 @@
  * wmtempnv: a sensor monitor for WindowMaker. this little app is mainly based
  * on wmsensormon and other simple dockapps.
  *
- * version = 0.1
- * date: Fri Oct 31 20:41:14 CET 2008 @861 /Internet Time/
- * author: Roman 'gryf' Dobosz
- * requirements: configured lm_sensors and sensor program, nvidia-settings, cut,
- *               grep.
+ * version = 0.4
+ *
+ * requirements: configured lm_sensors, sensor program and
+ *               nvidia-settings package
  * licence: gpl
  */
 
@@ -23,6 +22,9 @@
 #include "wmtempnv_master2.xpm"
 #include "wmtempnv_mask.xbm"
 
+#include <NVCtrl/NVCtrl.h>
+#include <NVCtrl/NVCtrlLib.h>
+
 #define MAXSTRLEN 8
 #define TEMP 40
 #define TEMP_OVER 47
@@ -31,35 +33,27 @@
 #define MAXFNAME 50
 
 void display_values(int, int, int);
-int get_temp(int core_number, int skip);
+int get_temp(int core_number, Display*);
 int get_offset(int temp, int cpu);
+Display *display;
 
 int main(int argc, char **argv){
     int temp1=0, temp2=0, temp3=0;
     /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
     int offset1=0, offset2=0, offset3=0;
     int counter = 0;
-    int skip = 3;
+    display = XOpenDisplay(NULL);
 
-    /* nvclock.dpy = NULL; */
-    /* if(!init_nvclock()) return 0; */
-    /* atexit(unload_nvclock); */
-    /* if(!set_card(0)) return 0; */
-
-    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits, wmtempnv_mask_width, wmtempnv_mask_height);
+    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits, 
+            wmtempnv_mask_width, wmtempnv_mask_height);
 
     while(TRUE){
-        if(counter==0){
-            skip--;
-            temp1 = get_temp(0, skip);
-            offset1 = get_offset(temp1, 1);
-            temp2 = get_temp(1, skip);
-            offset2 = get_offset(temp2, 1);
-            temp3 = get_temp(2, skip);
-            offset3 = get_offset(temp3, 0);
-            counter = 500;
-            if (skip == 0) skip = 3;
-        }
+        temp1 = get_temp(0, display);
+        offset1 = get_offset(temp1, 1);
+        temp2 = get_temp(1, display);
+        offset2 = get_offset(temp2, 1);
+        temp3 = get_temp(2, display);
+        offset3 = get_offset(temp3, 0);
 
         // core 1
         copyXPMArea(0, 87 + offset1, 23, 7, 4, 7); // LCD: "CPU"
@@ -79,7 +73,7 @@ int main(int argc, char **argv){
         display_values(temp3, 28, offset3);
         RedrawWindow();
         counter--;
-        usleep(2000);
+        sleep(1);
     }
 }
 
@@ -118,27 +112,20 @@ void display_values(int temp, int offset, int offset2){
     copyXPMArea(5 * num4, 65 + offset2, 5, 7, 51, 7 + offset);
 }
 
-int get_temp(int core_number, int skip){
+int get_temp(int core_number, Display *disp){
     // Core temperature. argument is core number. core no.2 is GPU
     FILE *file;
     char filename[MAXFNAME];
     int core_temp = 0;
-    char gpu_cmd[] = "nvidia-settings -tq GPUCoreTemp";
+	Bool res;
 
-    /* if(core_number == 2 && skip > 0){ */
     if(core_number == 2){
-        printf("%d\n", skip);
-        // GPU
-        file = popen(gpu_cmd, "r");
-        while (!feof(file)) {
-            char line[MAXSTRLEN + 1];
-            bzero(line, MAXSTRLEN + 1);
-            fgets(line, MAXSTRLEN, file);
-            if(line[0] != 0){
-                sscanf(line, "%d", &core_temp);
-            }
-        }
-        pclose(file);
+
+		res = XNVCTRLQueryTargetAttribute(disp,
+				NV_CTRL_TARGET_TYPE_GPU, 0, 0,
+				NV_CTRL_GPU_CORE_TEMPERATURE, &core_temp);
+
+		if (res == False) core_temp = 0;
     }else{
         snprintf(filename, MAXFNAME,
                 "/sys/bus/platform/devices/coretemp.0/temp%d_input",
