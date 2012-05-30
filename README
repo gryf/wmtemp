@@ -1,4 +1,4 @@
-This is dead simple Windo Wmaker app for monitoring CPU and GPU temperature.
+This is dead simple Window Wmaker app for monitoring CPU and GPU temperature.
 Hardcoded Core2 and Nvidia GPU support. Based on WMTempMon dockapp.
 
 author: roman.dobosz@gmail.com
