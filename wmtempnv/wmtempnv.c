@@ -35,25 +35,50 @@
 void display_values(int, int, int);
 int get_temp(int core_number, Display*);
 int get_offset(int temp, int cpu);
+void display_help(char* progname);
+int get_gpu_temp(char* path, Display *disp);
+void read_file_into(char *filepath, int *output);
 Display *display;
 
 int main(int argc, char **argv){
+    short got_path=0;
     int temp1=0, temp2=0, temp3=0;
     /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
     int offset1=0, offset2=0, offset3=0;
     int counter = 0;
+    char* path = "";
     display = XOpenDisplay(NULL);
 
-    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits, 
+    if (argc > 1) {
+        if (argc > 2) {
+            display_help(argv[0]);
+            exit(2);
+        }
+        
+        if (argc == 2 &&
+                (strcmp(argv[1], "--help") == 0 ||
+                 strcmp(argv[1], "-h") == 0)) {
+            display_help(argv[0]);
+            exit(0);
+        }
+
+        got_path = 1;
+        path = argv[1];
+    }
+
+    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits,
             wmtempnv_mask_width, wmtempnv_mask_height);
 
     while(TRUE){
-        temp1 = get_temp(0, display);
-        offset1 = get_offset(temp1, 1);
-        temp2 = get_temp(1, display);
-        offset2 = get_offset(temp2, 1);
-        temp3 = get_temp(2, display);
-        offset3 = get_offset(temp3, 0);
+        if (counter < 1){
+            counter = 5;
+            temp1 = get_temp(0, display);
+            offset1 = get_offset(temp1, 1);
+            temp2 = get_temp(1, display);
+            offset2 = get_offset(temp2, 1);
+            temp3 = get_gpu_temp(path, display);
+            offset3 = get_offset(temp3, 0);
+        }
 
         // core 1
         copyXPMArea(0, 87 + offset1, 23, 7, 4, 7); // LCD: "CPU"
@@ -73,7 +98,7 @@ int main(int argc, char **argv){
         display_values(temp3, 28, offset3);
         RedrawWindow();
         counter--;
-        sleep(1);
+        usleep(100000);
     }
 }
 
@@ -113,30 +138,54 @@ void display_values(int temp, int offset, int offset2){
 }
 
 int get_temp(int core_number, Display *disp){
-    // Core temperature. argument is core number. core no.2 is GPU
+    // Core temperature. argument is core number.
     FILE *file;
     char filename[MAXFNAME];
     int core_temp = 0;
 	Bool res;
 
-    if(core_number == 2){
-
-		res = XNVCTRLQueryTargetAttribute(disp,
-				NV_CTRL_TARGET_TYPE_GPU, 0, 0,
-				NV_CTRL_GPU_CORE_TEMPERATURE, &core_temp);
-
-		if (res == False) core_temp = 0;
-    }else{
-        snprintf(filename, MAXFNAME,
-                "/sys/bus/platform/devices/coretemp.0/temp%d_input",
-                core_number + 2);
-        if((file = fopen(filename, "r")) != NULL){
-            if(fscanf(file, "%d", &core_temp) != EOF){
-                core_temp = core_temp / 1000;
-                fclose(file);
-            }
-        }
-    }
+    snprintf(filename, MAXFNAME,
+            "/sys/bus/platform/devices/coretemp.0/temp%d_input",
+            core_number + 2);
+    read_file_into(filename, &core_temp);
     return core_temp;
 }
 
+int get_gpu_temp(char* path, Display *disp){
+    // return GPU temperature. Argument is path in sysfs or empty string.
+    FILE *file;
+    char filename[MAXFNAME];
+    int gpu_temp = 0;
+	Bool res;
+
+    if (strcmp(path, "") == 0){
+		res = XNVCTRLQueryTargetAttribute(disp,
+				NV_CTRL_TARGET_TYPE_GPU, 0, 0,
+				NV_CTRL_GPU_CORE_TEMPERATURE, &gpu_temp);
+
+		if (res == False) gpu_temp = 0;
+    }else{
+        read_file_into(path, &gpu_temp);
+    }
+    return gpu_temp;
+}
+
+void read_file_into(char *filepath, int *output) {
+    // Read an integer from the provided filepath and write it in the address
+    FILE *fp;
+    if((fp = fopen(filepath, "r")) != NULL){
+        if(fscanf(fp, "%d", output) != EOF){
+            *output = *output / 1000;
+            fclose(fp);
+        }
+    }
+}
+
+void display_help(char* progname){
+    printf("Dockapp for monitoring CPU and Nvidia GPU temperatures.\n");
+    printf("Usage:\n\t%s [full path for temp in sysfs]\n\n", progname);
+    printf("As an optional parameter you can provide `temp_input' ");
+    printf("full path from sysfs,\ncorresponding to your gfx card ");
+    printf("to read temperature from. Otherwise\nfunctionality of ");
+    printf("nv-control will be used (package nvidia-settings).\n");
+}
