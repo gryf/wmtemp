@@ -1,4 +1,4 @@
 This is dead simple Window Wmaker app for monitoring CPU and GPU temperature.
 Hardcoded Core2 and Nvidia GPU support. Based on WMTempMon dockapp.
 
-Depends on lmsensors and nvidia-settings packages.
+Depends on lmsensors and optionally on nvidia-settings packages.
