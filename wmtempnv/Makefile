@@ -9,14 +9,14 @@ OBJ = $(SRC:.c=.o)
 
 CFLAGS = -Wall -O3
 
-LIB = -I/usr/include/NVCtrl/ -L/usr/X11R6/lib -lXpm -lXext -lX11 -lsensors -lXNVCtrl
+LIB = -L/usr/X11R6/lib -lXpm -lXext -lX11 -lsensors
 
 INSTALL = /usr/bin/install
 
 CC = gcc
 
 all: $(OBJ)
-	$(CC) $(CFLAGS) -o $(EXE) $(OBJ) $(LIB)
+	$(CC) -o $(EXE) $(OBJ) $(LIB)
 	strip $(EXE)
 
 $(OBJ): %.o : %.c 

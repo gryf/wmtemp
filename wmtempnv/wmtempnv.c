@@ -4,8 +4,8 @@
  *
  * version = 0.4
  *
- * requirements: configured lm_sensors, sensor program and
- *               nvidia-settings package
+ * requirements: configured lm_sensors, sensor program and nouveau
+ *
  * licence: gpl
  */
 
@@ -18,66 +18,36 @@
 #include <string.h>
 #include "../wmgeneral/wmgeneral.h"
 #include "../wmgeneral/misc.h"
-#include "../wmgeneral/misc.h"
 #include "wmtempnv_master2.xpm"
 #include "wmtempnv_mask.xbm"
-
-#include <NVCtrl/NVCtrl.h>
-#include <NVCtrl/NVCtrlLib.h>
 
 #define MAXSTRLEN 8
 #define TEMP 40
 #define TEMP_OVER 47
 #define GPU_T 70
 #define GPU_T_OVER 85
-#define MAXFNAME 50
 
 void display_values(int, int, int);
-int get_temp(int core_number, Display*);
+int get_temp(int core_number);
 int get_offset(int temp, int cpu);
-void display_help(char* progname);
-int get_gpu_temp(char* path, Display *disp);
-void read_file_into(char *filepath, int *output);
-Display *display;
 
 int main(int argc, char **argv){
-    short got_path=0;
     int temp1=0, temp2=0, temp3=0;
     /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
     int offset1=0, offset2=0, offset3=0;
     int counter = 0;
-    char* path = "";
-    display = XOpenDisplay(NULL);
 
-    if (argc > 1) {
-        if (argc > 2) {
-            display_help(argv[0]);
-            exit(2);
-        }
-        
-        if (argc == 2 &&
-                (strcmp(argv[1], "--help") == 0 ||
-                 strcmp(argv[1], "-h") == 0)) {
-            display_help(argv[0]);
-            exit(0);
-        }
-
-        got_path = 1;
-        path = argv[1];
-    }
-
-    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits,
-            wmtempnv_mask_width, wmtempnv_mask_height);
+    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits, wmtempnv_mask_width, wmtempnv_mask_height);
 
     while(TRUE){
-        if (counter < 1){
-            counter = 5;
-            temp1 = get_temp(0, display);
+        if(counter==0){
+            temp1 = get_temp(0);
             offset1 = get_offset(temp1, 1);
-            temp2 = get_temp(1, display);
+            temp2 = get_temp(1);
             offset2 = get_offset(temp2, 1);
-            temp3 = get_gpu_temp(path, display);
+            temp3 = get_temp(2) / 1000;
             offset3 = get_offset(temp3, 0);
+            counter = 200;
         }
 
         // core 1
@@ -98,7 +68,7 @@ int main(int argc, char **argv){
         display_values(temp3, 28, offset3);
         RedrawWindow();
         counter--;
-        usleep(100000);
+        usleep(5000);
     }
 }
 
@@ -137,55 +107,26 @@ void display_values(int temp, int offset, int offset2){
     copyXPMArea(5 * num4, 65 + offset2, 5, 7, 51, 7 + offset);
 }
 
-int get_temp(int core_number, Display *disp){
-    // Core temperature. argument is core number.
+int get_temp(int core_number){
+    // Core temperature. argument is core number. core no.2 is GPU
     FILE *file;
-    char filename[MAXFNAME];
-    int core_temp = 0;
-	Bool res;
-
-    snprintf(filename, MAXFNAME,
-            "/sys/bus/platform/devices/coretemp.0/temp%d_input",
-            core_number + 2);
-    read_file_into(filename, &core_temp);
-    return core_temp;
-}
-
-int get_gpu_temp(char* path, Display *disp){
-    // return GPU temperature. Argument is path in sysfs or empty string.
-    FILE *file;
-    char filename[MAXFNAME];
-    int gpu_temp = 0;
-	Bool res;
-
-    if (strcmp(path, "") == 0){
-		res = XNVCTRLQueryTargetAttribute(disp,
-				NV_CTRL_TARGET_TYPE_GPU, 0, 0,
-				NV_CTRL_GPU_CORE_TEMPERATURE, &gpu_temp);
-
-		if (res == False) gpu_temp = 0;
+    int core=0;
+    char cmd[] = "                                                                                           ";
+    if(core_number==2){
+        sprintf(cmd, "echo `cat /sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/hwmon/hwmon0/temp1_input`");
     }else{
-        read_file_into(path, &gpu_temp);
+        sprintf(cmd, "echo `sensors |grep 'Core %d'|cut -d ':' -f 2|cut -d '.' -f 1`", core_number);
     }
-    return gpu_temp;
-}
-
-void read_file_into(char *filepath, int *output) {
-    // Read an integer from the provided filepath and write it in the address
-    FILE *fp;
-    if((fp = fopen(filepath, "r")) != NULL){
-        if(fscanf(fp, "%d", output) != EOF){
-            *output = *output / 1000;
-            fclose(fp);
+    file = popen(cmd, "r");
+    while (! feof(file)) {
+        char line[MAXSTRLEN + 1];
+        bzero(line, MAXSTRLEN + 1);
+        fgets(line, MAXSTRLEN, file);
+        if(line[0] != 0){
+            sscanf(line, "%d", &core);
         }
     }
-}
+    pclose(file);
 
-void display_help(char* progname){
-    printf("Dockapp for monitoring CPU and Nvidia GPU temperatures.\n");
-    printf("Usage:\n\t%s [full path for temp in sysfs]\n\n", progname);
-    printf("As an optional parameter you can provide `temp_input' ");
-    printf("full path from sysfs,\ncorresponding to your gfx card ");
-    printf("to read temperature from. Otherwise\nfunctionality of ");
-    printf("nv-control will be used (package nvidia-settings).\n");
+    return core;
 }
