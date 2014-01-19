@@ -41,7 +41,6 @@ void read_file_into(char *filepath, int *output);
 Display *display;
 
 int main(int argc, char **argv){
-    short got_path=0;
     int temp1=0, temp2=0, temp3=0, temp4=0, temp5=0;
     /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
     int offset1=0, offset2=0, offset3=0, offset4=0, offset5=0;
@@ -62,7 +61,6 @@ int main(int argc, char **argv){
             exit(0);
         }
 
-        got_path = 1;
         path = argv[1];
     }
 
@@ -108,7 +106,7 @@ int main(int argc, char **argv){
         // gpu
         //copyXPMArea(23, 87 + offset3, 23, 7, 4, 35);
         //copyXPMArea(66, 65 + offset3, 9, 7, 51, 35);
-        display_values(temp5, 42, offset3);
+        display_values(temp5, 42, offset5);
         RedrawWindow();
         counter--;
         usleep(100000);
@@ -152,10 +150,8 @@ void display_values(int temp, int offset, int offset2){
 
 int get_temp(int core_number, Display *disp){
     // Core temperature. argument is core number.
-    FILE *file;
     char filename[MAXFNAME];
     int core_temp = 0;
-	Bool res;
 
     snprintf(filename, MAXFNAME,
             "/sys/bus/platform/devices/coretemp.0/temp%d_input",
@@ -166,8 +162,6 @@ int get_temp(int core_number, Display *disp){
 
 int get_gpu_temp(char* path, Display *disp){
     // return GPU temperature. Argument is path in sysfs or empty string.
-    FILE *file;
-    char filename[MAXFNAME];
     int gpu_temp = 0;
 	Bool res;
 
