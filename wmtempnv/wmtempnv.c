@@ -19,22 +19,22 @@
 #include "../wmgeneral/wmgeneral.h"
 #include "../wmgeneral/misc.h"
 #include "../wmgeneral/misc.h"
-#include "wmtempnv_master2.xpm"
+#include "wmtempnv_master.xpm"
 #include "wmtempnv_mask.xbm"
 
 #include <NVCtrl/NVCtrl.h>
 #include <NVCtrl/NVCtrlLib.h>
 
 #define MAXSTRLEN 8
-#define TEMP 40
-#define TEMP_OVER 47
-#define GPU_T 70
-#define GPU_T_OVER 85
+#define WARN_TEMP 40
+#define CRIT_TEMP 47
+#define WARN_TEMP_GPU 70
+#define CRIT_TEMP_GPU 85
 #define MAXFNAME 50
 
 void display_values(int, int, int);
 int get_temp(int core_number, Display*);
-int get_offset(int temp, int cpu);
+int get_offset(int temp, short cpu);
 void display_help(char* progname);
 int get_gpu_temp(char* path, Display *disp);
 void read_file_into(char *filepath, int *output);
@@ -42,9 +42,9 @@ Display *display;
 
 int main(int argc, char **argv){
     short got_path=0;
-    int temp1=0, temp2=0, temp3=0;
+    int temp1=0, temp2=0, temp3=0, temp4=0, temp5=0;
     /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
-    int offset1=0, offset2=0, offset3=0;
+    int offset1=0, offset2=0, offset3=0, offset4=0, offset5=0;
     int counter = 0;
     char* path = "";
     display = XOpenDisplay(NULL);
@@ -66,50 +66,63 @@ int main(int argc, char **argv){
         path = argv[1];
     }
 
-    openXwindow(argc, argv, wmtempnv_master2_xpm, wmtempnv_mask_bits,
+    openXwindow(argc, argv, wmtempnv_master, wmtempnv_mask_bits,
             wmtempnv_mask_width, wmtempnv_mask_height);
 
     while(TRUE){
         if (counter < 1){
             counter = 5;
+
             temp1 = get_temp(0, display);
             offset1 = get_offset(temp1, 1);
             temp2 = get_temp(1, display);
             offset2 = get_offset(temp2, 1);
-            temp3 = get_gpu_temp(path, display);
-            offset3 = get_offset(temp3, 0);
+            temp3 = get_temp(2, display);
+            offset3 = get_offset(temp1, 1);
+            temp4 = get_temp(3, display);
+            offset4 = get_offset(temp2, 1);
+            temp2 = get_temp(1, display);
+            offset2 = get_offset(temp2, 1);
+            temp5 = get_gpu_temp(path, display);
+            offset5 = get_offset(temp3, 0);
         }
 
         // core 1
-        copyXPMArea(0, 87 + offset1, 23, 7, 4, 7); // LCD: "CPU"
-        copyXPMArea(69, 87 + offset1, 5, 7, 22, 7); // LCD: number of cpu
-        copyXPMArea(66, 65 + offset1, 9, 7, 51, 7); // LCD: "°C"
+        //copyXPMArea(0, 87 + offset1, 23, 7, 4, 7); // LCD: "CPU"
+        //copyXPMArea(69, 87 + offset1, 5, 7, 22, 7); // LCD: number of cpu
+        //copyXPMArea(66, 65 + offset1, 9, 7, 51, 7); // LCD: "°C"
         display_values(temp1, 0, offset1);
 
         // core 2
-        copyXPMArea(0, 87 + offset2, 23, 7, 4, 21);
-        copyXPMArea(75, 87 + offset2, 5, 7, 22, 21);
-        copyXPMArea(66, 65 + offset2, 9, 7, 51, 21);
-        display_values(temp2, 14, offset2);
+        //copyXPMArea(0, 87 + offset2, 23, 7, 4, 21);
+        //copyXPMArea(75, 87 + offset2, 5, 7, 22, 21);
+        //copyXPMArea(66, 65 + offset2, 9, 7, 51, 21);
+        display_values(temp2, 9, offset2);
+
+        // core 3
+        display_values(temp3, 18, offset3);
+
+        // core 4
+        display_values(temp4, 27, offset4);
 
         // gpu
-        copyXPMArea(23, 87 + offset3, 23, 7, 4, 35);
-        copyXPMArea(66, 65 + offset3, 9, 7, 51, 35);
-        display_values(temp3, 28, offset3);
+        //copyXPMArea(23, 87 + offset3, 23, 7, 4, 35);
+        //copyXPMArea(66, 65 + offset3, 9, 7, 51, 35);
+        display_values(temp5, 42, offset3);
         RedrawWindow();
         counter--;
         usleep(100000);
     }
 }
 
-int get_offset(int temp, int cpu){
+int get_offset(int temp, short cpu){
     int alt, wrn;
     if(cpu == 1){
-        wrn = TEMP;
-        alt = TEMP_OVER;
+        wrn = WARN_TEMP;
+        alt = CRIT_TEMP;
     }else{
-        wrn = GPU_T;
-        alt = GPU_T_OVER;
+        wrn = WARN_TEMP_GPU;
+        alt = CRIT_TEMP_GPU;
     }
     if(temp >= alt){
         return 7;  // Alert
