@@ -1,11 +1,11 @@
 /*
- * wmtempnv: a temperature monitor for WindowMaker. This little app is mainly
+ * wmtemp: a temperature monitor for WindowMaker. This little app is mainly
  * based on wmsensormon and other simple dockapps, although it doesn't use 
  * lmsensors, just provided information from kernel via /sys filesystem.
  *
  * version = 0.5
  *
- * licence: gpl
+ * licence: GPL2
  */
 
 #include <ctype.h>
@@ -26,8 +26,8 @@
 #include "../wmgeneral/wmgeneral.h"
 #include "../wmgeneral/misc.h"
 #include "../wmgeneral/misc.h"
-#include "wmtempnv_master.xpm"
-#include "wmtempnv_mask.xbm"
+#include "wmtemp_master.xpm"
+#include "wmtemp_mask.xbm"
 
 #define MAXLEN 200
 #define MAXFNAME 70
@@ -111,8 +111,8 @@ int main(int argc, char **argv){
         }
     }
 
-    openXwindow(argc, argv, wmtempnv_master, wmtempnv_mask_bits,
-            wmtempnv_mask_width, wmtempnv_mask_height);
+    openXwindow(argc, argv, wmtemp_master, wmtemp_mask_bits,
+            wmtemp_mask_width, wmtemp_mask_height);
 
     while(TRUE){
         if (counter < 1){

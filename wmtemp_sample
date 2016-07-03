@@ -1,0 +1,17 @@
+# wmtemp conf file
+
+cpu1_path = /sys/devices/platform/coretemp.0/hwmon/hwmon2/temp2_input
+cpu1_critical = 80
+cpu1_warning = 65
+cpu2_path = /sys/devices/platform/coretemp.0/hwmon/hwmon2/temp3_input
+cpu2_critical = 80
+cpu2_warning = 65
+cpu3_path = /sys/devices/platform/coretemp.0/hwmon/hwmon2/temp4_input
+cpu3_critical = 80
+cpu3_warning = 65
+cpu4_path = /sys/devices/platform/coretemp.0/hwmon/hwmon2/temp5_input
+cpu4_critical = 80
+cpu4_warning = 65
+gpu_path = /sys/devices/virtual/hwmon/hwmon1/temp4_input
+gpu_critical = 70
+gpu_warning = 60
