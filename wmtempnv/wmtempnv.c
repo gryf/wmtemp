@@ -1,69 +1,114 @@
 /*
- * wmtempnv: a sensor monitor for WindowMaker. this little app is mainly based
- * on wmsensormon and other simple dockapps.
+ * wmtempnv: a temperature monitor for WindowMaker. This little app is mainly
+ * based on wmsensormon and other simple dockapps, although it doesn't use 
+ * lmsensors, just provided information from kernel via /sys filesystem.
  *
- * version = 0.4
+ * version = 0.5
  *
- * requirements: configured lm_sensors, sensor program and
- *               nvidia-settings package
  * licence: gpl
  */
 
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <string.h>
+
 #include <sys/param.h>
 #include <sys/types.h>
+
 #include "standards.h"
 #include <X11/Xlib.h>
 #include <X11/xpm.h>
 #include <X11/extensions/shape.h>
-#include <string.h>
+
 #include "../wmgeneral/wmgeneral.h"
 #include "../wmgeneral/misc.h"
 #include "../wmgeneral/misc.h"
 #include "wmtempnv_master.xpm"
 #include "wmtempnv_mask.xbm"
 
-#include <NVCtrl/NVCtrl.h>
-#include <NVCtrl/NVCtrlLib.h>
+#define MAXLEN 200
+#define MAXFNAME 70
+#define MAXCORENUM 4
 
-#define MAXSTRLEN 8
-#define WARN_TEMP 65
-#define CRIT_TEMP 80
-#define WARN_TEMP_GPU 70
-#define CRIT_TEMP_GPU 85
-#define MAXFNAME 50
+struct entry {
+    char *path;
+    long critical;
+    long warning;
+};
 
+struct config {
+    struct entry cpu1;
+    struct entry cpu2;
+    struct entry cpu3;
+    struct entry cpu4;
+    struct entry gpu;
+};
 
-void display_values(int, int, int);
-int get_temp(int core_number, Display*);
-int get_offset(int temp, short cpu);
-void display_help(char* progname);
-int get_gpu_temp(char* path, Display *disp);
-void read_file_into(char *filepath, int *output);
+char cpu1_path[100];
+int cpu1_warn = 0;
+int cpu1_crit = 0;
+char cpu2_path[100];
+int cpu2_warn = 0;
+int cpu2_crit = 0;
+char cpu3_path[100];
+int cpu3_warn = 0;
+int cpu3_crit = 0;
+char cpu4_path[100];
+int cpu4_warn = 0;
+int cpu4_crit = 0;
+char gpu1_path[100];
+int gpu1_warn = 0;
+int gpu1_crit = 0;
+
+typedef struct _core {
+    int temp;
+    /* offset is one of 0 (normal), 7 (critical), 14 (warning) */
+    short offset;
+} core;
+
 Display *display;
 
+char *vcopy(char *str);
+int get_gpu_temp(char *path, Display *disp);
+int get_temp(struct entry *etr);
+short get_offset(short temp, struct entry *etr);
+void conf_read(char *filename);
+void display_help(char *progname);
+void display_values(int, short, short);
+void draw_cpu_temp(short core_no, core *cpu);
+void draw_gpu_temp(core *gpu);
+void read_file_into(char *filepath, int *output);
+void set_defaults(struct config *conf);
+char *strip(char * string);
+void parse_config(struct config *conf);
+
 int main(int argc, char **argv){
-    int core1_temp=0, core2_temp=0, core3_temp=0, core4_temp=0, gpu_temp=0;
-    /* offset is one of 0 (normal), 7 (alert), 14 (warning) */
-    int core1_offset=0, core2_offset=0, core3_offset=0, core4_offset=0,
-        gpu_offset=0;
-    int counter = 0;
-    char* path = "";
+    int i;
+    short counter = 0;
+    struct config conf;
+
+    set_defaults(&conf);
+
+    parse_config(&conf);
+
     display = XOpenDisplay(NULL);
+    core gpu, *cpus = malloc(MAXCORENUM * sizeof (core));
 
     if (argc > 1) {
         if (argc > 2) {
             display_help(argv[0]);
             exit(2);
         }
-        
+
         if (argc == 2 &&
                 (strcmp(argv[1], "--help") == 0 ||
                  strcmp(argv[1], "-h") == 0)) {
             display_help(argv[0]);
             exit(0);
         }
-
-        path = argv[1];
     }
 
     openXwindow(argc, argv, wmtempnv_master, wmtempnv_mask_bits,
@@ -72,75 +117,188 @@ int main(int argc, char **argv){
     while(TRUE){
         if (counter < 1){
             counter = 5;
-
-            // cpu
-            core1_temp = get_temp(0, display);
-            core1_offset = get_offset(core1_temp, 1);
-            core2_temp = get_temp(1, display);
-            core2_offset = get_offset(core2_temp, 1);
-            core3_temp = get_temp(2, display);
-            core3_offset = get_offset(core3_temp, 1);
-            core4_temp = get_temp(3, display);
-            core4_offset = get_offset(core4_temp, 1);
-
-            // gpu
-            gpu_temp = get_gpu_temp(path, display);
-            gpu_offset = get_offset(gpu_temp, 0);
+            cpus[0].temp = get_temp(&conf.cpu1);
+            cpus[0].offset = get_offset(cpus[0].temp, &conf.cpu1);
+            cpus[1].temp = get_temp(&conf.cpu2);
+            cpus[1].offset = get_offset(cpus[1].temp, &conf.cpu2);
+            cpus[2].temp = get_temp(&conf.cpu3);
+            cpus[2].offset = get_offset(cpus[2].temp, &conf.cpu3);
+            cpus[3].temp = get_temp(&conf.cpu4);
+            cpus[3].offset = get_offset(cpus[3].temp, &conf.cpu4);
+            gpu.temp = get_temp(&conf.gpu);
+            gpu.offset = get_offset(gpu.temp, &conf.gpu);
         }
 
-        // core 1
-        copyXPMArea(0, 87 + core1_offset, 23, 7, 4, 7); // LCD: "CPU"
-        copyXPMArea(5, 65 + core1_offset, 5, 7, 22, 7); // LCD: number of cpu
-        copyXPMArea(66, 65 + core1_offset, 9, 7, 51, 7); // LCD: "°C"
-        display_values(core1_temp, 0, core1_offset);
-
-        // core 2
-        copyXPMArea(0, 87 + core2_offset, 23, 7, 4, 16);
-        copyXPMArea(10, 65 + core2_offset, 5, 7, 22, 16);
-        copyXPMArea(66, 65 + core2_offset, 9, 7, 51, 16);
-        display_values(core2_temp, 9, core2_offset);
-
-        // core 3
-        copyXPMArea(0, 87 + core3_offset, 23, 7, 4, 25);
-        copyXPMArea(15, 65 + core3_offset, 5, 7, 22, 25);
-        copyXPMArea(66, 65 + core3_offset, 9, 7, 51, 25);
-        display_values(core3_temp, 18, core3_offset);
-
-        // core 4
-        copyXPMArea(0, 87 + core4_offset, 23, 7, 4, 34);
-        copyXPMArea(20, 65 + core4_offset, 5, 7, 22, 34);
-        copyXPMArea(66, 65 + core4_offset, 9, 7, 51, 34);
-        display_values(core4_temp, 27, core4_offset);
+        // cpu's
+        for (i=0; i < 4; i++){
+            draw_cpu_temp(i, &cpus[i]);
+        }
 
         // gpu
-        copyXPMArea(23, 87 + gpu_offset, 23, 7, 4, 49);
-        copyXPMArea(66, 65 + gpu_offset , 9, 7, 51, 49);
-        display_values(gpu_temp, 42, gpu_offset);
+        draw_gpu_temp(&gpu);
+
         RedrawWindow();
         counter--;
         usleep(100000);
     }
+    free(conf.cpu1.path);
+    free(conf.cpu2.path);
+    free(conf.cpu3.path);
+    free(conf.cpu4.path);
+    free(conf.gpu.path);
 }
 
-int get_offset(int temp, short cpu){
-    int alt, wrn;
-    if(cpu == 1){
-        wrn = WARN_TEMP;
-        alt = CRIT_TEMP;
-    }else{
-        wrn = WARN_TEMP_GPU;
-        alt = CRIT_TEMP_GPU;
+void set_defaults(struct config *conf) {
+    struct config configuration;
+    configuration = *conf;
+    configuration.cpu1.critical = 80;
+    configuration.cpu1.warning = 65;
+    configuration.cpu2.critical = 80;
+    configuration.cpu2.warning = 65;
+    configuration.cpu3.critical = 80;
+    configuration.cpu3.warning = 65;
+    configuration.cpu4.critical = 80;
+    configuration.cpu4.warning = 65;
+    configuration.gpu.critical = 80;
+    configuration.gpu.warning = 65;
+
+    configuration.cpu1.path = malloc(sizeof(char));
+    strcpy(configuration.cpu1.path, "");
+    configuration.cpu2.path = malloc(sizeof(char));
+    strcpy(configuration.cpu2.path, "");
+    configuration.cpu3.path = malloc(sizeof(char));
+    strcpy(configuration.cpu3.path, "");
+    configuration.cpu4.path = malloc(sizeof(char));
+    strcpy(configuration.cpu4.path, "");
+    configuration.gpu.path = malloc(sizeof(char));
+    strcpy(configuration.gpu.path, "");
+    *conf = configuration;
+}
+
+char *strip(char * string) {
+    char *string1 = string,
+         *string2 = &string[strlen (string) - 1];
+
+    /* Strip right side */
+    while ((isspace(*string2)) && (string2 >= string1))
+        string2--;
+
+    *(string2+1) = '\0';
+
+    /* Strip left side */
+    while ((isspace(*string1)) && (string1 < string2))
+        string1++;
+
+    strcpy (string, string1);
+    return string;
+}
+
+void parse_config(struct config *conf) {
+    char *item, 
+         *conf_file,
+         buff[256],
+         name[MAXLEN],
+         value[MAXLEN];
+    struct config cfg;
+    FILE *fp;
+
+    conf_file = malloc(strlen(getenv("HOME")) + strlen("/.wmtemp") + 1);
+    sprintf(conf_file, "%s/.wmtemp", getenv("HOME"));
+
+    cfg = *conf;
+    fp = fopen (conf_file, "r");
+    if (fp == NULL) {
+        return;
     }
-    if(temp >= alt){
+
+    while ((item = fgets (buff, sizeof buff, fp)) != NULL) {
+        if (buff[0] == '\n' || buff[0] == '#') 
+            continue;
+
+        /* Parse name/value pair from item */
+        item = strtok(buff, "=");
+        strip(item);
+        if (item == NULL)
+            continue;
+        else
+            strncpy (name, item, MAXLEN);
+
+        item = strtok (NULL, "=");
+        if (item == NULL)
+            continue;
+        else
+            strncpy (value, item, MAXLEN);
+        strip(value);
+
+        if (!strcmp(name, "cpu1_path")){
+            free(cfg.cpu1.path);
+            cfg.cpu1.path = malloc(sizeof(value) + 1);
+            strcpy(cfg.cpu1.path, value);
+        }
+
+        if (!strcmp(name, "cpu2_path")){
+            free(cfg.cpu2.path);
+            cfg.cpu2.path = malloc(sizeof(value) + 1);
+            strcpy(cfg.cpu2.path, value);
+        }
+
+        if (!strcmp(name, "cpu1_path")){
+            free(cfg.cpu3.path);
+            cfg.cpu3.path = malloc(sizeof(value) + 1);
+            strcpy(cfg.cpu3.path, value);
+        }
+
+        if (!strcmp(name, "cpu1_path")){
+            free(cfg.cpu4.path);
+            cfg.cpu4.path = malloc(sizeof(value) + 1);
+            strcpy(cfg.cpu4.path, value);
+        }
+
+        if (!strcmp(name, "gpu_path")){
+            free(cfg.gpu.path);
+            cfg.gpu.path = malloc(sizeof(value) + 1);
+            strcpy(cfg.gpu.path, value);
+        }
+
+        if (!strcmp(name, "cpu1_critical"))
+            cfg.cpu1.critical = atoi(value);
+        if (!strcmp(name, "cpu2_critical"))
+            cfg.cpu2.critical = atoi(value);
+        if (!strcmp(name, "cpu3_critical"))
+            cfg.cpu3.critical = atoi(value);
+        if (!strcmp(name, "cpu4_critical"))
+            cfg.cpu4.critical = atoi(value);
+        if (!strcmp(name, "gpu_critical"))
+            cfg.gpu.critical = atoi(value);
+       
+        if (!strcmp(name, "cpu1_warning"))
+            cfg.cpu1.warning = atoi(value);
+        if (!strcmp(name, "cpu2_warning"))
+            cfg.cpu2.warning = atoi(value);
+        if (!strcmp(name, "cpu3_warning"))
+            cfg.cpu3.warning = atoi(value);
+        if (!strcmp(name, "cpu4_warning"))
+            cfg.cpu4.warning = atoi(value);
+        if (!strcmp(name, "gpu_warning"))
+            cfg.gpu.warning = atoi(value);
+    }
+
+    *conf = cfg;
+    fclose (fp);
+    free(conf_file);
+}
+
+short get_offset(short temp, struct entry *etr){
+    if(temp >= etr->critical){
         return 7;  // Alert
-    }else if(temp >= wrn){
+    }else if(temp >= etr->warning){
         return 14; // Warning
     }else{
         return 0;  // Normal
     }
 }
 
-void display_values(int temp, int offset, int core2_offset){
+void display_values(int temp, short offset, short core2_offset){
     char text[5], num1, num2, num3, num4;
 
     sprintf(text, "%03d", temp);
@@ -157,33 +315,10 @@ void display_values(int temp, int offset, int core2_offset){
     copyXPMArea(5 * num4, 65 + core2_offset, 5, 7, 51, 7 + offset);
 }
 
-int get_temp(int core_number, Display *disp){
-    // Core temperature. argument is core number.
-    char filename[MAXFNAME];
+int get_temp(struct entry *etr){
     int core_temp = 0;
-
-    snprintf(filename, MAXFNAME,
-            "/sys/bus/platform/devices/coretemp.0/temp%d_input",
-            core_number + 2);
-    read_file_into(filename, &core_temp);
+    read_file_into(etr->path, &core_temp);
     return core_temp;
-}
-
-int get_gpu_temp(char* path, Display *disp){
-    // return GPU temperature. Argument is path in sysfs or empty string.
-    int gpu_temp = 0;
-	Bool res;
-
-    if (strcmp(path, "") == 0){
-		res = XNVCTRLQueryTargetAttribute(disp,
-				NV_CTRL_TARGET_TYPE_GPU, 0, 0,
-				NV_CTRL_GPU_CORE_TEMPERATURE, &gpu_temp);
-
-		if (res == False) gpu_temp = 0;
-    }else{
-        read_file_into(path, &gpu_temp);
-    }
-    return gpu_temp;
 }
 
 void read_file_into(char *filepath, int *output) {
@@ -194,10 +329,31 @@ void read_file_into(char *filepath, int *output) {
             *output = *output / 1000;
             fclose(fp);
         }
+    }else{
+        *output = 0;
     }
 }
 
-void display_help(char* progname){
+void draw_cpu_temp(short core_no, core *cpu) {
+    // Copy prepared bitmap for the core. Cores are enumerated from 0. offset
+    // is warning/critical (orange/red) shift in the bitmap
+
+    short y_offset = core_no * 9;
+
+    copyXPMArea(0, 87 + cpu->offset, 23, 7, 4, 7 + y_offset); // "CPU"
+    // number of cpu
+    copyXPMArea(5 + core_no * 5, 65 + cpu->offset, 5, 7, 22, 7 + y_offset);
+    copyXPMArea(66, 65 + cpu->offset, 9, 7, 51, 7 + y_offset); // "°C"
+    display_values(cpu->temp, y_offset, cpu->offset); // temp
+}
+
+void draw_gpu_temp(core *gpu) {
+    copyXPMArea(23, 87 + gpu->offset, 23, 7, 4, 49);
+    copyXPMArea(66, 65 + gpu->offset , 9, 7, 51, 49);
+    display_values(gpu->temp, 42, gpu->offset);
+}
+
+void display_help(char *progname){
     printf("Dockapp for monitoring CPU and Nvidia GPU temperatures.\n");
     printf("Usage:\n\t%s [full path for temp in sysfs]\n\n", progname);
     printf("As an optional parameter you can provide `temp_input' ");
