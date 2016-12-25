@@ -57,7 +57,7 @@ Every core have three options to change:
   file contains a number of temperature in mili-Celsius.
 * ``[core]_critical`` - temperature in °C, on which (and beyond) red color would
   be used for highlight the entry.
-* ``[core]_warninf`` - temperature in °C, on which (and beyond) orange color
+* ``[core]_warning`` - temperature in °C, on which (and beyond) orange color
   would be used for highlight the entry.
 
 In main directory there is a ``wmtemp_sample`` file, which can be copied to
