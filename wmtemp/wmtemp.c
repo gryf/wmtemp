@@ -230,31 +230,31 @@ void parse_config(struct config *conf) {
             strncpy (value, item, MAXLEN);
         strip(value);
 
-        if (!strcmp(name, "cpu1_path")){
+        if (strncmp(name, "cpu1_path", 9) == 0){
             free(cfg.cpu1.path);
             cfg.cpu1.path = malloc(sizeof(value) + 1);
             strcpy(cfg.cpu1.path, value);
         }
 
-        if (!strcmp(name, "cpu2_path")){
+        if (strncmp(name, "cpu2_path", 9) == 0){
             free(cfg.cpu2.path);
             cfg.cpu2.path = malloc(sizeof(value) + 1);
             strcpy(cfg.cpu2.path, value);
         }
 
-        if (!strcmp(name, "cpu1_path")){
+        if (strncmp(name, "cpu3_path", 9) == 0){
             free(cfg.cpu3.path);
             cfg.cpu3.path = malloc(sizeof(value) + 1);
             strcpy(cfg.cpu3.path, value);
         }
 
-        if (!strcmp(name, "cpu1_path")){
+        if (strncmp(name, "cpu4_path", 9) == 0){
             free(cfg.cpu4.path);
             cfg.cpu4.path = malloc(sizeof(value) + 1);
             strcpy(cfg.cpu4.path, value);
         }
 
-        if (!strcmp(name, "gpu_path")){
+        if (strncmp(name, "gpu_path", 8) == 0){
             free(cfg.gpu.path);
             cfg.gpu.path = malloc(sizeof(value) + 1);
             strcpy(cfg.gpu.path, value);
