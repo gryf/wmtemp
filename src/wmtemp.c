@@ -3,7 +3,7 @@
  * based on wmsensormon and other simple dockapps, although it doesn't use 
  * lmsensors, just provided information from kernel via /sys filesystem.
  *
- * version = 0.5
+ * version = 0.7
  *
  * licence: GPL2
  */

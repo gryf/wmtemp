@@ -1,9 +1,8 @@
 # By RedSeb 1999, Liverbugg 2002
 
+SRC = src/wmtemp.c
 
-SRC = wmtemp.c
-
-EXE = wmtemp
+EXE = src/wmtemp
 
 OBJ = $(SRC:.c=.o)
 
@@ -23,11 +22,11 @@ $(OBJ): %.o : %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -rf $(EXE)
-	rm -rf *.o
+	rm -rf $(EXE) src/*.o
 
 install:
 	$(INSTALL) $(EXE) /usr/local/bin/
+
 uninstall:
 	rm -rf /usr/local/bin/$(EXE)
 

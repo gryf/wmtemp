@@ -10,12 +10,11 @@ Based on WMTempMon dockapp, although it was heavily reworked.
 Compile
 -------
 
-To build the dockapp, you'll need `libdockap`_ it should be available in your
+To build the dockapp, you'll need `libdockapp`_ it should be available in your
 package repository. While you have it installed, perform the commands:
 
 .. code:: shell-session
 
-   $ cd wmtemp
    $ make
    $ sudo make install
 
