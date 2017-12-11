@@ -1,7 +1,7 @@
 # By RedSeb 1999, Liverbugg 2002
 
 
-SRC = wmtemp.c ../wmgeneral/wmgeneral.c ../wmgeneral/misc.c ../wmgeneral/list.c
+SRC = wmtemp.c
 
 EXE = wmtemp
 
@@ -9,7 +9,7 @@ OBJ = $(SRC:.c=.o)
 
 CFLAGS = -Wall -O3
 
-LIB = -L/usr/X11R6/lib -lXpm -lXext -lX11
+LIB = -L/usr/X11R6/lib -lXpm -lXext -lX11 -ldockapp
 
 INSTALL = /usr/bin/install
 
@@ -25,7 +25,6 @@ $(OBJ): %.o : %.c
 clean:
 	rm -rf $(EXE)
 	rm -rf *.o
-	rm -rf ../wmgeneral/*.o
 
 install:
 	$(INSTALL) $(EXE) /usr/local/bin/

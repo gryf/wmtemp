@@ -10,7 +10,8 @@ Based on WMTempMon dockapp, although it was heavily reworked.
 Compile
 -------
 
-To build the dockapp, perform the commands:
+To build the dockapp, you'll need `libdockap`_ it should be available in your
+package repository. While you have it installed, perform the commands:
 
 .. code:: shell-session
 
@@ -67,3 +68,5 @@ Licence
 -------
 
 This software is licensed under GPL2 license. See COPYING file for details.
+
+.. _libdockapp: http://www.dockapps.net/libdockapp
